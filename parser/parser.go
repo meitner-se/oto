@@ -8,6 +8,8 @@ import (
 	"go/doc"
 	"go/token"
 	"go/types"
+	"html/template"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -99,6 +101,139 @@ func (d *Definition) ObjectIsOutput(name string) bool {
 		}
 	}
 	return false
+}
+
+func (d *Definition) ZodEndpointSchema() template.HTML {
+	// Store the objects that has been generated
+	generated := make(map[string]struct{})
+
+	builder := &strings.Builder{}
+	builder.WriteString("import { z } from \"zod\";\n")
+	builder.WriteString("import ZodTypes from \"./zod_types.gen\";\n")
+	builder.WriteString("\n")
+
+	for _, service := range d.Services {
+		for _, method := range service.Methods {
+			d.writeZodEndpointSchemaObject(method.InputObject.CleanObjectName, builder, generated)
+			d.writeZodEndpointSchemaObject(method.OutputObject.CleanObjectName, builder, generated)
+		}
+	}
+
+	return template.HTML(builder.String())
+}
+
+func getTypeNameForZOD(fieldType string) string {
+	if !strings.HasPrefix(fieldType, "types.") {
+		panic("invalid field type: " + fieldType)
+	}
+
+	return "ZodTypes." + strings.TrimPrefix(fieldType, "types.")
+}
+
+func removePackagePrefix(variable string) string {
+	if strings.Contains(variable, ".") {
+		variable = strings.TrimPrefix(filepath.Ext(variable), ".")
+	}
+
+	return variable
+}
+
+func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *strings.Builder, generated map[string]struct{}) {
+	objectName = removePackagePrefix(objectName)
+
+	// Skip if it has already been generated
+	if _, ok := generated[objectName]; ok {
+		return
+	}
+
+	generated[objectName] = struct{}{}
+
+	object, err := d.Object(objectName)
+	if err != nil {
+		panic("cannot get object to generate zod endpoint schema for object " + objectName + " " + err.Error())
+	}
+
+	for _, field := range object.Fields {
+		if _, ok := field.Metadata["exclude"]; ok {
+			continue
+		}
+
+		if field.Type.IsObject {
+			d.writeZodEndpointSchemaObject(field.Type.CleanObjectName, builder, generated)
+		}
+
+		if field.Type.IsMap {
+			if _, err := d.Object(field.Type.Map.ElementType); err == nil {
+				d.writeZodEndpointSchemaObject(field.Type.Map.ElementType, builder, generated)
+			}
+		}
+	}
+
+	fmt.Fprintf(builder, "const %s_schema = z.object({\n", snakeDown(object.Name))
+
+	for _, field := range object.Fields {
+		if _, ok := field.Metadata["exclude"]; ok {
+			continue
+		}
+
+		builder.WriteString("\t")
+		builder.WriteString(field.NameLowerSnake + ": ")
+
+		if removePackagePrefix(field.Type.CleanObjectName) == objectName {
+			builder.WriteString("z.lazy(() => ")
+		}
+
+		switch {
+		case field.Type.IsObject:
+			builder.WriteString(snakeDown(removePackagePrefix(field.Type.CleanObjectName)) + "_schema")
+		case field.Type.IsMap:
+			builder.WriteString("z.map(")
+			builder.WriteString("z." + field.Type.Map.KeyTypeTS + "(), ")
+
+			_, err := d.Object(field.Type.Map.ElementType)
+			if err == nil {
+				builder.WriteString(snakeDown(field.Type.Map.ElementType) + "_schema")
+			} else {
+				builder.WriteString("z." + field.Type.Map.ElementTypeTS + "()")
+			}
+
+			if field.Type.Map.ElementIsMultiple {
+				builder.WriteString(".array()")
+			}
+
+			builder.WriteString(")")
+		default:
+			if customTypeName, ok := field.Metadata["type"].(string); ok {
+				builder.WriteString(getTypeNameForZOD(customTypeName))
+			} else {
+				builder.WriteString("z." + field.Type.JSType + "()")
+			}
+		}
+
+		if field.Type.Multiple {
+			builder.WriteString(".array()")
+		}
+
+		if nullable, ok := field.Metadata["nullable"]; ok {
+			if nullable.(bool) {
+				builder.WriteString(".nullable()")
+			}
+		}
+
+		if optional, ok := field.Metadata["optional"]; ok {
+			if optional.(bool) {
+				builder.WriteString(".optional()")
+			}
+		}
+
+		if removePackagePrefix(field.Type.CleanObjectName) == objectName {
+			builder.WriteString(")")
+		}
+
+		builder.WriteString(",\n")
+	}
+
+	builder.WriteString("});\n\n")
 }
 
 // Service describes a service, akin to an interface in Go.
