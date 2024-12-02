@@ -251,9 +251,9 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 
 	builder.WriteString("});\n\n")
 	
-	builder.WriteString(fmt.Sprintf("export type %sSchema = z.infer<%s_schema>;\n", object.Name, snakeDown(object.Name)))
+	builder.WriteString(fmt.Sprintf("export type %sSchema = z.infer<typeof %s_schema>;\n", object.Name, snakeDown(object.Name)))
 	
-	builder.WriteString("});\n\n")
+	builder.WriteString("\n\n")
 }
 
 // Service describes a service, akin to an interface in Go.
