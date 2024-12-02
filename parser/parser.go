@@ -193,14 +193,14 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 	if len(extendedFields) > 0 {
 		extendedString := ""
 		for i, field := range extendedFields {
-			if i == 1 {
+			if i == 0 {
 				extendedString += field
 			} else {
 				extendedString += ".merge(" + field + ")"
 			}
 		}
 
-		fmt.Fprintf(builder, "export const %sSchema = %s).merge(z.object({\n", camelizeDown(object.Name), extendedString)
+		fmt.Fprintf(builder, "export const %sSchema = %s.merge(z.object({\n", camelizeDown(object.Name), extendedString)
 	} else {
 		fmt.Fprintf(builder, "export const %sSchema = z.object({\n", camelizeDown(object.Name))
 	}
