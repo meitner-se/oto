@@ -182,7 +182,21 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 		}
 	}
 
-	fmt.Fprintf(builder, "export const %sSchema = z.object({\n", camelizeDown(object.Name))
+	extendedObjects := make([]string, 0)
+	for _, object := range d.Objects {
+		if _, ok := object.Metadata["extend"]; ok {
+			extendedObjects = append(extendedObjects, object.Name)
+		}
+	}
+
+	// Write out the extended objects
+	if len(extendedObjects) > 0 {
+		extendedString := strings.Join(extendedObjects, ".extend(")
+
+		fmt.Fprintf(builder, "export const %sSchema = %e).extend({\n", camelizeDown(object.Name), extendedString)
+	} else {
+		fmt.Fprintf(builder, "export const %sSchema = z.object({\n", camelizeDown(object.Name))
+	}
 
 	for _, field := range object.Fields {
 		if _, ok := field.Metadata["exclude"]; ok {
