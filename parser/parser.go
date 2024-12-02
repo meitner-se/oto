@@ -191,7 +191,6 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 
 	// Write out the extended objects
 	if len(extendedFields) > 0 {
-		extendedString := ""
 		if len(extendedFields) == 1 {
 			fmt.Fprintf(builder, "export const %sSchema = %d.extend(z.object({\n", camelizeDown(object.Name), extendedFields[0])
 		} else {
