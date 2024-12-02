@@ -185,7 +185,7 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 		}
 	}
 
-	fmt.Fprintf(builder, "const %s_schema = z.object({\n", snakeDown(object.Name))
+	fmt.Fprintf(builder, "export const %s_schema = z.object({\n", snakeDown(object.Name))
 
 	for _, field := range object.Fields {
 		if _, ok := field.Metadata["exclude"]; ok {
@@ -249,6 +249,10 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 		builder.WriteString(",\n")
 	}
 
+	builder.WriteString("});\n\n")
+	
+	builder.WriteString(fmt.Sprintf("export type %sSchema = z.infer<%s_schema>;\n", object.Name, snakeDown(object.Name)))
+	
 	builder.WriteString("});\n\n")
 }
 
