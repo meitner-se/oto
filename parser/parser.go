@@ -185,7 +185,7 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 	extendedFields := make([]string, 0)
 	for _, field := range object.Fields {
 		if _, ok := field.Metadata["extend"]; ok {
-			extendedFields = append(extendedFields, field.Name)
+			extendedFields = append(extendedFields, camelizeDown(removePackagePrefix(field.Type.CleanObjectName)) + "Schema")
 		}
 	}
 
