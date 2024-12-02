@@ -128,11 +128,8 @@ func (d *Definition) ZodEndpointSchema() template.HTML {
 	builder.WriteString("import ZodTypes from \"./zod_types.gen\";\n")
 	builder.WriteString("\n")
 
-	for _, service := range d.Services {
-		for _, method := range service.Methods {
-			d.writeZodEndpointSchemaObject(method.InputObject.CleanObjectName, builder, generated)
-			d.writeZodEndpointSchemaObject(method.OutputObject.CleanObjectName, builder, generated)
-		}
+	for _, object := range d.Objects {
+		d.writeZodEndpointSchemaObject(object.Name, builder, generated)
 	}
 
 	return template.HTML(builder.String())
