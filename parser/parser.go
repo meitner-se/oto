@@ -191,9 +191,14 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 
 	// Write out the extended objects
 	if len(extendedFields) > 0 {
-		extendedString := strings.Join(extendedFields, ".extend(")
+		extendedString := ""
+		if len(extendedFields) == 1 {
+			fmt.Fprintf(builder, "export const %sSchema = %d.extend(z.object({\n", camelizeDown(object.Name), extendedFields[0])
+		} else {
+			extendedString := strings.Join(extendedFields, ".extend(")
 
-		fmt.Fprintf(builder, "export const %sSchema = %e).extend({\n", camelizeDown(object.Name), extendedString)
+			fmt.Fprintf(builder, "export const %sSchema = %d).extend(z.object({\n", camelizeDown(object.Name), extendedString)
+		}
 	} else {
 		fmt.Fprintf(builder, "export const %sSchema = z.object({\n", camelizeDown(object.Name))
 	}
@@ -260,7 +265,11 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 		builder.WriteString(",\n")
 	}
 
-	builder.WriteString("});\n\n")
+	if len(extendedFields) > 0 {
+		builder.WriteString("}));\n\n")
+	} else {
+		builder.WriteString("});\n\n")
+	}
 }
 
 // Service describes a service, akin to an interface in Go.
