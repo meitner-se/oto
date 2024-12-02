@@ -200,7 +200,7 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 			}
 		}
 
-		fmt.Fprintf(builder, "export const %sSchema = %d).merge(z.object({\n", camelizeDown(object.Name), extendedString)
+		fmt.Fprintf(builder, "export const %sSchema = %s).merge(z.object({\n", camelizeDown(object.Name), extendedString)
 	} else {
 		fmt.Fprintf(builder, "export const %sSchema = z.object({\n", camelizeDown(object.Name))
 	}
