@@ -185,7 +185,7 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 		}
 	}
 
-	fmt.Fprintf(builder, "export const %s_schema = z.object({\n", snakeDown(object.Name))
+	fmt.Fprintf(builder, "export const %sschema = z.object({\n", camelizeDown(object.Name))
 
 	for _, field := range object.Fields {
 		if _, ok := field.Metadata["exclude"]; ok {
@@ -201,14 +201,14 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 
 		switch {
 		case field.Type.IsObject:
-			builder.WriteString(snakeDown(removePackagePrefix(field.Type.CleanObjectName)) + "_schema")
+			builder.WriteString(camelizeDown(removePackagePrefix(field.Type.CleanObjectName)) + "Schema")
 		case field.Type.IsMap:
 			builder.WriteString("z.map(")
 			builder.WriteString("z." + field.Type.Map.KeyTypeTS + "(), ")
 
 			_, err := d.Object(field.Type.Map.ElementType)
 			if err == nil {
-				builder.WriteString(snakeDown(field.Type.Map.ElementType) + "_schema")
+				builder.WriteString(camelizeDown(field.Type.Map.ElementType) + "Schema")
 			} else {
 				builder.WriteString("z." + field.Type.Map.ElementTypeTS + "()")
 			}
@@ -250,10 +250,6 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 	}
 
 	builder.WriteString("});\n\n")
-	
-	builder.WriteString(fmt.Sprintf("export type %sSchema = z.infer<typeof %s_schema>;\n", object.Name, snakeDown(object.Name)))
-	
-	builder.WriteString("\n\n")
 }
 
 // Service describes a service, akin to an interface in Go.
@@ -283,6 +279,8 @@ type Method struct {
 type Object struct {
 	TypeID   string  `json:"typeID"`
 	Name     string  `json:"name"`
+	NameLowerCamel string    `json:"nameLowerCamel"`
+	NameLowerSnake string    `json:"nameLowerSnake"`
 	Imported bool    `json:"imported"`
 	Fields   []Field `json:"fields"`
 	Comment  string  `json:"comment"`
@@ -509,6 +507,8 @@ func (p *Parser) parseMethod(pkg *packages.Package, serviceName string, methodTy
 func (p *Parser) parseObject(pkg *packages.Package, o types.Object, v *types.Struct) error {
 	var obj Object
 	obj.Name = o.Name()
+	obj.NameLowerCamel = camelizeDown(obj.Name)
+	obj.NameLowerSnake = snakeDown(obj.Name)
 	obj.Comment = p.commentForType(obj.Name)
 	var err error
 	obj.Metadata, obj.Comment, err = p.extractCommentMetadata(obj.Comment)
