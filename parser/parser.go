@@ -185,7 +185,7 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 		}
 	}
 
-	fmt.Fprintf(builder, "export const %sschema = z.object({\n", camelizeDown(object.Name))
+	fmt.Fprintf(builder, "export const %sSchema = z.object({\n", camelizeDown(object.Name))
 
 	for _, field := range object.Fields {
 		if _, ok := field.Metadata["exclude"]; ok {
