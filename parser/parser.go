@@ -236,7 +236,7 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 
 		fmt.Fprintf(builder, "export const %sSchema: z.ZodType<%sRecursive> = %sBaseSchema.extend({", camelizeDown(object.Name), object.Name, camelizeDown(object.Name))
 		for _, field := range recursiveFields {
-			builder.WriteString("\t")
+			builder.WriteString("\n\t")
 			builder.WriteString(field + ": ")
 			builder.WriteString("z.lazy(() => ")
 			builder.WriteString(camelizeDown(object.Name) + "Schema")
@@ -265,20 +265,23 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 	builder.WriteString("z.object({\n")
 
 	for _, field := range fields {
+		// Field is excluded
 		if _, ok := field.Metadata["exclude"]; ok {
 			continue
 		}
 
+		// Field is an extended field, we handle this separately
 		if _, ok := field.Metadata["extend"]; ok {
+			continue
+		}
+
+		// Field is a recursive field, we handle this separately
+		if removePackagePrefix(field.Type.CleanObjectName) == objectName {
 			continue
 		}
 
 		builder.WriteString("\t")
 		builder.WriteString(field.NameLowerSnake + ": ")
-
-		if removePackagePrefix(field.Type.CleanObjectName) == objectName {
-			builder.WriteString("z.lazy(() => ")
-		}
 
 		switch {
 		case field.Type.IsObject:
