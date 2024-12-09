@@ -301,7 +301,7 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 			}
 
 			builder.WriteString(")")
-		case field.Metadata["options"] != nil && reflect.TypeOf(field.Metadata["options"]).Kind() == reflect.Array:
+		case field.Metadata["options"] != nil:
 			builder.WriteString("z.enum([" + strings.Join(field.Metadata["options"].([]string), ", ") + "])")
 		default:
 			if customTypeName, ok := field.Metadata["type"].(string); ok {
