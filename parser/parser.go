@@ -306,7 +306,7 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 
 			for _, option := range field.Metadata["options"].([]interface{}) {
 				if s, ok := option.(string); ok {
-					options = append(options, s)
+					options = append(options, "\""+s+"\"")
 				}
 			}
 
