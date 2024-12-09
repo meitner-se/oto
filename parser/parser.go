@@ -242,7 +242,6 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 			builder.WriteString(camelizeDown(object.Name) + "Schema")
 			builder.WriteString("),\n")
 		}
-		builder.WriteString("\n\n")
 
 		builder.WriteString("})")
 	} else {
@@ -302,6 +301,8 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 			}
 
 			builder.WriteString(")")
+		case field.Metadata["options"]:
+			builder.WriteString("z.enum(" + field.Metadata["options"].(string) + ")")
 		default:
 			if customTypeName, ok := field.Metadata["type"].(string); ok {
 				builder.WriteString(getTypeNameForZOD(customTypeName))
