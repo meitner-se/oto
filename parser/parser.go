@@ -155,7 +155,7 @@ func getRecursiveFields(objectFields []Field, objectName string) []string {
 	recursiveFields := make([]string, 0)
 	for _, field := range objectFields {
 		if field.Type.IsObject && removePackagePrefix(field.Type.CleanObjectName) == objectName {
-			recursiveFields = append(recursiveFields, removePackagePrefix(field.Type.CleanObjectName))
+			recursiveFields = append(recursiveFields, field.NameLowerSnake)
 			break
 		}
 	}
@@ -175,7 +175,7 @@ func getExtendedFields(objectFields []Field) []string {
 }
 
 func getMergeString(extendedFields []string) string {
-	mergeString := extendedFields[0]
+	mergeString := ""
 	for _, field := range extendedFields {
 		mergeString += ".merge(" + field + ")"
 	}
@@ -217,7 +217,7 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 	recursiveFields := getRecursiveFields(object.Fields, objectName)
 
 	if len(recursiveFields) > 0 {
-		fmt.Fprintf(builder, "const %sBaseSchema = ", camelizeDown(object.Name))
+		fmt.Fprintf(builder, "const %sBaseSchema = ", object.NameLowerCamel)
 		d.writeZodBaseObject(object.Fields, objectName, builder)
 		builder.WriteString(";\n\n")
 	}
@@ -225,15 +225,16 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 	extendedFields := getExtendedFields(object.Fields)
 
 	if len(recursiveFields) > 0 {
-		fmt.Fprintf(builder, "type %sRecursive = z.infer<typeof %sBaseSchema> & {\n", object.Name, object.Name)
+		fmt.Fprintf(builder, "type %sRecursive = z.infer<typeof %sBaseSchema> & {\n", object.Name, object.NameLowerCamel)
 		for _, field := range recursiveFields {
 			builder.WriteString("\t")
 			builder.WriteString(field + ": ")
-			builder.WriteString("%sRecursive")
+			fmt.Fprintf(builder, "%sRecursive", object.Name)
+			builder.WriteString("\n};")
 		}
 		builder.WriteString("\n\n")
 
-		fmt.Fprintf(builder, "export const %sSchema<%sRecursive> = %sBaseSchema.extend({", camelizeDown(object.Name), object.Name, camelizeDown(object.Name))
+		fmt.Fprintf(builder, "export const %sSchema: z.ZodType<%sRecursive> = %sBaseSchema.extend({", camelizeDown(object.Name), object.Name, camelizeDown(object.Name))
 		for _, field := range recursiveFields {
 			builder.WriteString("\t")
 			builder.WriteString(field + ": ")
@@ -252,7 +253,7 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 	if len(extendedFields) > 0 {
 		mergeString := getMergeString(extendedFields)
 
-		fmt.Fprintf(builder, ")%s", mergeString)
+		fmt.Fprintf(builder, "%s", mergeString)
 	}
 
 	builder.WriteString(";")
