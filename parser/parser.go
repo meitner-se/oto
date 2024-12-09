@@ -176,10 +176,8 @@ func getExtendedFields(objectFields []Field) []string {
 
 func getMergeString(extendedFields []string) string {
 	mergeString := extendedFields[0]
-	for i, field := range extendedFields {
-		if i > 0 {
-			mergeString += ".merge(" + field + ")"
-		}
+	for _, field := range extendedFields {
+		mergeString += ".merge(" + field + ")"
 	}
 
 	return mergeString
@@ -221,18 +219,10 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 	if len(recursiveFields) > 0 {
 		fmt.Fprintf(builder, "const %sBaseSchema = ", camelizeDown(object.Name))
 		d.writeZodBaseObject(object.Fields, objectName, builder)
+		builder.WriteString(";\n\n")
 	}
 
 	extendedFields := getExtendedFields(object.Fields)
-
-	// Write out the extended objects
-	if len(extendedFields) > 0 {
-		mergeString := getMergeString(extendedFields)
-
-		fmt.Fprintf(builder, "export const %sSchema = %s.merge(", camelizeDown(object.Name), mergeString)
-	} else {
-		fmt.Fprintf(builder, "export const %sSchema = ", camelizeDown(object.Name))
-	}
 
 	if len(recursiveFields) > 0 {
 		fmt.Fprintf(builder, "type %sRecursive = z.infer<typeof %sBaseSchema> & {\n", object.Name, object.Name)
@@ -255,11 +245,14 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 
 		builder.WriteString("})")
 	} else {
+		fmt.Fprintf(builder, "export const %sSchema = ", camelizeDown(object.Name))
 		d.writeZodBaseObject(object.Fields, objectName, builder)
 	}
 
 	if len(extendedFields) > 0 {
-		builder.WriteString(")")
+		mergeString := getMergeString(extendedFields)
+
+		fmt.Fprintf(builder, ")%s", mergeString)
 	}
 
 	builder.WriteString(";")
