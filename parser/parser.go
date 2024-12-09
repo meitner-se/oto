@@ -282,8 +282,6 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 		builder.WriteString("\t")
 		builder.WriteString(field.NameLowerSnake + ": ")
 
-		builder.WriteString(field.Metadata["options"].(string))
-
 		switch {
 		case field.Type.IsObject:
 			builder.WriteString(camelizeDown(removePackagePrefix(field.Type.CleanObjectName)) + "Schema")
