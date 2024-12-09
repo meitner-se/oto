@@ -1,6 +1,6 @@
 module github.com/meitner-se/oto
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/dustin/go-humanize v1.0.1
