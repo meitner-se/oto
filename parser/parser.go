@@ -286,7 +286,7 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 		case field.Type.IsObject:
 			builder.WriteString(camelizeDown(removePackagePrefix(field.Type.CleanObjectName)) + "Schema")
 		case field.Type.IsMap:
-			builder.WriteString("z.map(")
+			builder.WriteString("z.record(")
 			builder.WriteString("z." + field.Type.Map.KeyTypeTS + "(), ")
 
 			_, err := d.Object(field.Type.Map.ElementType)
