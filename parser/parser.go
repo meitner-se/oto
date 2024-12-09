@@ -302,7 +302,15 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 
 			builder.WriteString(")")
 		case field.Metadata["options"] != nil:
-			builder.WriteString("z.enum([" + strings.Join(field.Metadata["options"].([]string), ", ") + "])")
+			options := make([]string, 0, len(field.Metadata["options"].([]interface{})))
+
+			for _, option := range field.Metadata["options"].([]interface{}) {
+				if s, ok := option.(string); ok {
+					options = append(options, s)
+				}
+			}
+
+			builder.WriteString("z.enum([" + strings.Join(options, ", ") + "])")
 		default:
 			if customTypeName, ok := field.Metadata["type"].(string); ok {
 				builder.WriteString(getTypeNameForZOD(customTypeName))
