@@ -151,11 +151,11 @@ func removePackagePrefix(variable string) string {
 	return variable
 }
 
-func getRecursiveFields(objectFields []Field, objectName string) []string {
-	recursiveFields := make([]string, 0)
+func getRecursiveFields(objectFields []Field, objectName string) []Field {
+	recursiveFields := make([]Field, 0)
 	for _, field := range objectFields {
 		if field.Type.IsObject && removePackagePrefix(field.Type.CleanObjectName) == objectName {
-			recursiveFields = append(recursiveFields, field.NameLowerSnake)
+			recursiveFields = append(recursiveFields, field)
 			break
 		}
 	}
@@ -228,7 +228,7 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 		fmt.Fprintf(builder, "type %sRecursive = z.infer<typeof %sBaseSchema> & {\n", object.Name, object.NameLowerCamel)
 		for _, field := range recursiveFields {
 			builder.WriteString("\t")
-			builder.WriteString(field + ": ")
+			builder.WriteString(field.NameLowerSnake + ": ")
 			fmt.Fprintf(builder, "%sRecursive", object.Name)
 			builder.WriteString("\n};")
 		}
@@ -237,10 +237,12 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 		fmt.Fprintf(builder, "export const %sSchema: z.ZodType<%sRecursive> = %sBaseSchema.extend({", camelizeDown(object.Name), object.Name, camelizeDown(object.Name))
 		for _, field := range recursiveFields {
 			builder.WriteString("\n\t")
-			builder.WriteString(field + ": ")
+			builder.WriteString(field.NameLowerSnake + ": ")
 			builder.WriteString("z.lazy(() => ")
 			builder.WriteString(camelizeDown(object.Name) + "Schema")
-			builder.WriteString("),\n")
+			builder.WriteString(")")
+			writeZodFieldModifiers(field, builder)
+			builder.WriteString(",\n")
 		}
 
 		builder.WriteString("})")
@@ -319,21 +321,7 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 			}
 		}
 
-		if field.Type.Multiple {
-			builder.WriteString(".array()")
-		}
-
-		if nullable, ok := field.Metadata["nullable"]; ok {
-			if nullable.(bool) {
-				builder.WriteString(".nullable()")
-			}
-		}
-
-		if optional, ok := field.Metadata["optional"]; ok {
-			if optional.(bool) {
-				builder.WriteString(".optional()")
-			}
-		}
+		writeZodFieldModifiers(field, builder)
 
 		if removePackagePrefix(field.Type.CleanObjectName) == objectName {
 			builder.WriteString(")")
@@ -343,6 +331,26 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 	}
 
 	builder.WriteString("})")
+}
+
+func writeZodFieldModifiers(field Field, builder *strings.Builder) {
+	if field.Type.Multiple {
+		for i := 0; i < len(field.Type.MultipleTimes); i++ {
+			builder.WriteString(".array()")
+		}
+	}
+
+	if nullable, ok := field.Metadata["nullable"]; ok {
+		if nullable.(bool) {
+			builder.WriteString(".nullable()")
+		}
+	}
+
+	if optional, ok := field.Metadata["optional"]; ok {
+		if optional.(bool) {
+			builder.WriteString(".optional()")
+		}
+	}
 }
 
 // Service describes a service, akin to an interface in Go.
