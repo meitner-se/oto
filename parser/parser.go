@@ -229,13 +229,15 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 		for _, field := range recursiveFields {
 			builder.WriteString("\t")
 
+			builder.WriteString(field.NameLowerSnake)
+
 			if optional, ok := field.Metadata["optional"]; ok {
 				if optional.(bool) {
 					builder.WriteString("?")
 				}
 			}
 
-			builder.WriteString(field.NameLowerSnake + ": ")
+			builder.WriteString(": ")
 			fmt.Fprintf(builder, "%sRecursive", object.Name)
 
 			if field.Type.Multiple {
