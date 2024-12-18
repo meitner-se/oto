@@ -228,11 +228,31 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 		fmt.Fprintf(builder, "type %sRecursive = z.infer<typeof %sBaseSchema> & {\n", object.Name, object.NameLowerCamel)
 		for _, field := range recursiveFields {
 			builder.WriteString("\t")
+
+			if optional, ok := field.Metadata["optional"]; ok {
+				if optional.(bool) {
+					builder.WriteString("?")
+				}
+			}
+
 			builder.WriteString(field.NameLowerSnake + ": ")
 			fmt.Fprintf(builder, "%sRecursive", object.Name)
-			builder.WriteString("\n};")
+
+			if field.Type.Multiple {
+				for i := 0; i < len(field.Type.MultipleTimes); i++ {
+					builder.WriteString("[]")
+				}
+			}
+
+			if nullable, ok := field.Metadata["nullable"]; ok {
+				if nullable.(bool) {
+					builder.WriteString(" | null")
+				}
+			}
+
+			builder.WriteString(",\n")
 		}
-		builder.WriteString("\n\n")
+		builder.WriteString("};\n\n")
 
 		fmt.Fprintf(builder, "export const %sSchema: z.ZodType<%sRecursive> = %sBaseSchema.extend({", camelizeDown(object.Name), object.Name, camelizeDown(object.Name))
 		for _, field := range recursiveFields {
