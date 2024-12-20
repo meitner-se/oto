@@ -124,9 +124,10 @@ func (d *Definition) ZodEndpointSchema() template.HTML {
 	generated := make(map[string]struct{})
 
 	builder := &strings.Builder{}
-	builder.WriteString("import { z } from \"zod\";\n")
-	builder.WriteString("import ZodTypes from \"./zod_types.gen\";\n")
-	builder.WriteString("\n")
+	builder.WriteString("import { z } from \"zod\";")
+	writeNewLines(1, builder)
+	builder.WriteString("import ZodTypes from \"./zod_types.gen\";")
+	writeNewLines(2, builder)
 
 	for _, object := range d.Objects {
 		d.writeZodEndpointSchemaObject(object.Name, builder, generated)
@@ -135,7 +136,7 @@ func (d *Definition) ZodEndpointSchema() template.HTML {
 	return template.HTML(builder.String())
 }
 
-func getTypeNameForZOD(fieldType string) string {
+func getTypeNameForZod(fieldType string) string {
 	if !strings.HasPrefix(fieldType, "types.") {
 		panic("invalid field type: " + fieldType)
 	}
@@ -156,7 +157,6 @@ func getRecursiveFields(objectFields []Field, objectName string) []Field {
 	for _, field := range objectFields {
 		if field.Type.IsObject && removePackagePrefix(field.Type.CleanObjectName) == objectName {
 			recursiveFields = append(recursiveFields, field)
-			break
 		}
 	}
 
@@ -219,55 +219,16 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 	if len(recursiveFields) > 0 {
 		fmt.Fprintf(builder, "const %sBaseSchema = ", object.NameLowerCamel)
 		d.writeZodBaseObject(object.Fields, objectName, builder)
-		builder.WriteString(";\n\n")
+		builder.WriteString(";")
+		writeNewLines(2, builder)
 	}
 
 	extendedFields := getExtendedFields(object.Fields)
 
 	if len(recursiveFields) > 0 {
-		fmt.Fprintf(builder, "type %sRecursive = z.infer<typeof %sBaseSchema> & {\n", object.Name, object.NameLowerCamel)
-		for _, field := range recursiveFields {
-			builder.WriteString("\t")
-
-			builder.WriteString(field.NameLowerSnake)
-
-			if optional, ok := field.Metadata["optional"]; ok {
-				if optional.(bool) {
-					builder.WriteString("?")
-				}
-			}
-
-			builder.WriteString(": ")
-			fmt.Fprintf(builder, "%sRecursive", object.Name)
-
-			if field.Type.Multiple {
-				for i := 0; i < len(field.Type.MultipleTimes); i++ {
-					builder.WriteString("[]")
-				}
-			}
-
-			if nullable, ok := field.Metadata["nullable"]; ok {
-				if nullable.(bool) {
-					builder.WriteString(" | null")
-				}
-			}
-
-			builder.WriteString(",\n")
-		}
-		builder.WriteString("};\n\n")
-
-		fmt.Fprintf(builder, "export const %sSchema: z.ZodType<%sRecursive> = %sBaseSchema.extend({", camelizeDown(object.Name), object.Name, camelizeDown(object.Name))
-		for _, field := range recursiveFields {
-			builder.WriteString("\n\t")
-			builder.WriteString(field.NameLowerSnake + ": ")
-			builder.WriteString("z.lazy(() => ")
-			builder.WriteString(camelizeDown(object.Name) + "Schema")
-			builder.WriteString(")")
-			writeZodFieldModifiers(field, builder)
-			builder.WriteString(",\n")
-		}
-
-		builder.WriteString("})")
+		writeRecursiveType(recursiveFields, object, builder)
+		writeNewLines(2, builder)
+		writeExtendedRecursiveZodObject(recursiveFields, object.Name, builder)
 	} else {
 		fmt.Fprintf(builder, "export const %sSchema = ", camelizeDown(object.Name))
 		d.writeZodBaseObject(object.Fields, objectName, builder)
@@ -280,12 +241,65 @@ func (d *Definition) writeZodEndpointSchemaObject(objectName string, builder *st
 	}
 
 	builder.WriteString(";")
+	writeNewLines(2, builder)
+}
 
-	builder.WriteString("\n\n")
+func writeRecursiveType(recursiveFields []Field, object *Object, builder *strings.Builder) {
+	fmt.Fprintf(builder, "type %sRecursive = z.infer<typeof %sBaseSchema> & {", object.Name, object.NameLowerCamel)
+	writeNewLines(1, builder)
+
+	for _, field := range recursiveFields {
+		builder.WriteString("\t")
+
+		builder.WriteString(field.NameLowerSnake)
+
+		if optional, ok := field.Metadata["optional"]; ok {
+			if optional.(bool) {
+				builder.WriteString("?")
+			}
+		}
+
+		builder.WriteString(": ")
+		fmt.Fprintf(builder, "%sRecursive", object.Name)
+
+		if field.Type.Multiple {
+			for i := 0; i < len(field.Type.MultipleTimes); i++ {
+				builder.WriteString("[]")
+			}
+		}
+
+		if nullable, ok := field.Metadata["nullable"]; ok {
+			if nullable.(bool) {
+				builder.WriteString(" | null")
+			}
+		}
+
+		builder.WriteString(";")
+		writeNewLines(1, builder)
+	}
+	builder.WriteString("};")
+}
+
+func writeExtendedRecursiveZodObject(fields []Field, objectName string, builder *strings.Builder) {
+	fmt.Fprintf(builder, "export const %sSchema: z.ZodType<%sRecursive> = %sBaseSchema.extend({", camelizeDown(objectName), objectName, camelizeDown(objectName))
+	for _, field := range fields {
+		writeNewLines(1, builder)
+		builder.WriteString("\t")
+		builder.WriteString(field.NameLowerSnake + ": ")
+		builder.WriteString("z.lazy(() => ")
+		builder.WriteString(camelizeDown(objectName) + "Schema")
+		builder.WriteString(")")
+		writeZodFieldModifiers(field, builder)
+		builder.WriteString(",")
+		writeNewLines(1, builder)
+	}
+
+	builder.WriteString("})")
 }
 
 func (d *Definition) writeZodBaseObject(fields []Field, objectName string, builder *strings.Builder) {
-	builder.WriteString("z.object({\n")
+	builder.WriteString("z.object({")
+	writeNewLines(1, builder)
 
 	for _, field := range fields {
 		// Field is excluded
@@ -308,36 +322,14 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 
 		switch {
 		case field.Type.IsObject:
-			builder.WriteString(camelizeDown(removePackagePrefix(field.Type.CleanObjectName)) + "Schema")
+			writeZodObject(field, builder)
 		case field.Type.IsMap:
-			builder.WriteString("z.record(")
-			builder.WriteString("z." + field.Type.Map.KeyTypeTS + "(), ")
-
-			_, err := d.Object(field.Type.Map.ElementType)
-			if err == nil {
-				builder.WriteString(camelizeDown(field.Type.Map.ElementType) + "Schema")
-			} else {
-				builder.WriteString("z." + field.Type.Map.ElementTypeTS + "()")
-			}
-
-			if field.Type.Map.ElementIsMultiple {
-				builder.WriteString(".array()")
-			}
-
-			builder.WriteString(")")
+			d.writeZodRecord(field, builder)
 		case field.Metadata["options"] != nil:
-			options := make([]string, 0, len(field.Metadata["options"].([]interface{})))
-
-			for _, option := range field.Metadata["options"].([]interface{}) {
-				if s, ok := option.(string); ok {
-					options = append(options, "\""+s+"\"")
-				}
-			}
-
-			builder.WriteString("z.enum([" + strings.Join(options, ", ") + "])")
+			writeZodEnum(field, builder)
 		default:
 			if customTypeName, ok := field.Metadata["type"].(string); ok {
-				builder.WriteString(getTypeNameForZOD(customTypeName))
+				builder.WriteString(getTypeNameForZod(customTypeName))
 			} else {
 				builder.WriteString("z." + field.Type.JSType + "()")
 			}
@@ -349,10 +341,51 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 			builder.WriteString(")")
 		}
 
-		builder.WriteString(",\n")
+		builder.WriteString(",")
+		writeNewLines(1, builder)
 	}
 
 	builder.WriteString("})")
+}
+
+func writeZodObject(field Field, builder *strings.Builder) {
+	builder.WriteString(camelizeDown(removePackagePrefix(field.Type.CleanObjectName)) + "Schema")
+}
+
+func (d *Definition) writeZodRecord(field Field, builder *strings.Builder) {
+	builder.WriteString("z.record(")
+	builder.WriteString("z." + field.Type.Map.KeyTypeTS + "(), ")
+
+	_, err := d.Object(field.Type.Map.ElementType)
+	if err == nil {
+		builder.WriteString(camelizeDown(field.Type.Map.ElementType) + "Schema")
+	} else {
+		builder.WriteString("z." + field.Type.Map.ElementTypeTS + "()")
+	}
+
+	if field.Type.Map.ElementIsMultiple {
+		builder.WriteString(".array()")
+	}
+
+	builder.WriteString(")")
+}
+
+func writeZodEnum(field Field, builder *strings.Builder) {
+	options := make([]string, 0, len(field.Metadata["options"].([]interface{})))
+
+	for _, option := range field.Metadata["options"].([]interface{}) {
+		if s, ok := option.(string); ok {
+			options = append(options, "\""+s+"\"")
+		}
+	}
+
+	builder.WriteString("z.enum([" + strings.Join(options, ", ") + "])")
+}
+
+func writeNewLines(count int, builder *strings.Builder) {
+	for i := 0; i < count; i++ {
+		builder.WriteString("\n")
+	}
 }
 
 func writeZodFieldModifiers(field Field, builder *strings.Builder) {
