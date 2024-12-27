@@ -33,15 +33,14 @@ type GreetResponse struct {
 // GetGreetingsRequest is the request object for GreeterService.GetGreetings.
 // featured: true
 type GetGreetingsRequest struct {
-	// Query describes which page of data to get.
-	Query services.Page `tagtest:"value,option1,option2"`
+	// Page describes which page of data to get.
+	Page services.Page `tagtest:"value,option1,option2"`
 }
 
 // GetGreetingsResponse is the respponse object for GreeterService.GetGreetings.
 // featured: false
 type GetGreetingsResponse struct {
-	Greetings  []Greeting
-	TotalCount int64
+	Greetings []Greeting
 }
 
 // Greeting contains the pleasentry.
