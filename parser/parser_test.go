@@ -1487,7 +1487,7 @@ func Test_ZodEndpointSchema(t *testing.T) {
 				},
 			},
 			objectName: "GreetRequest",
-			want: `import ZodTypes from "./zod_types.gen";
+			want: `import ZodTypes from "./zod_types";
 
 export const greetRequestSchema = z.object({
 	string: ZodTypes.String,
