@@ -786,6 +786,31 @@ func Test_writeZodBaseObject(t *testing.T) {
 })`,
 		},
 		{
+			name:       "zod_type override",
+			definition: Definition{},
+			fields: []Field{
+				{
+					NameLowerSnake: "email",
+					Metadata: map[string]interface{}{
+						"zod_type": "z.string().email()",
+					},
+					Type: FieldType{JSType: "string"},
+				},
+				{
+					NameLowerSnake: "count",
+					Metadata: map[string]interface{}{
+						"zod_type": "z.number().int().positive()",
+					},
+					Type: FieldType{JSType: "number"},
+				},
+			},
+			objectName: "GreetRequest",
+			want: `z.object({
+	email: z.string().email(),
+	count: z.number().int().positive(),
+})`,
+		},
+		{
 			name:       "Modifiers",
 			definition: Definition{},
 			fields: []Field{
