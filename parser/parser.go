@@ -326,7 +326,9 @@ func (d *Definition) writeZodBaseObject(fields []Field, objectName string, build
 		case field.Metadata["options"] != nil:
 			writeZodEnum(field, builder)
 		default:
-			if customTypeName, ok := field.Metadata["type"].(string); ok {
+			if zodType, ok := field.Metadata["zod_type"].(string); ok && zodType != "" {
+				builder.WriteString(zodType)
+			} else if customTypeName, ok := field.Metadata["type"].(string); ok {
 				builder.WriteString(getTypeNameForZod(customTypeName))
 			} else {
 				builder.WriteString("z." + field.Type.JSType + "()")
